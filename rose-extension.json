@@ -1,0 +1,28 @@
+{
+  "id": "rose-bond",
+  "name": "Bond",
+  "version": "1.0.0",
+  "description": "Control Bond Bridge smart-home devices: fans, fireplaces, shades, generics. Multi-bridge, IR/RF learn, scenes, rooms, AI tool calls.",
+  "author": "ProjectRose",
+  "latin": "Rosa bondiana",
+  "navItem": { "label": "Bond", "iconName": "lightbulb" },
+  "provides": {
+    "pageView": true,
+    "globalSettings": true,
+    "main": true,
+    "agentTools": true,
+    "tools": [
+      {
+        "name": "bond_list_devices",
+        "displayName": "List Bond Devices",
+        "description": "List every Bond device, room, and scene with the actions and parameter schemas each one supports."
+      },
+      {
+        "name": "bond_control",
+        "displayName": "Control Bond Device",
+        "description": "Turn devices on/off, change fan speed, brightness, shade position, fireplace flame, fan out an action across a room, or run a saved scene."
+      }
+    ],
+    "systemPrompt": "prompts/system.md"
+  }
+}

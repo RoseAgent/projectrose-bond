@@ -1,0 +1,26 @@
+{
+  "name": "@projectrose/rose-bond",
+  "version": "1.0.0",
+  "description": "Control Bond Bridge smart-home devices",
+  "private": true,
+  "exports": {
+    "./renderer": "./renderer.ts",
+    "./main": "./main.ts"
+  },
+  "scripts": {
+    "build:renderer": "esbuild renderer.ts --bundle --format=cjs --platform=browser --jsx=automatic --outfile=dist/renderer.js --external:react --external:react/jsx-runtime --external:@renderer/* --external:zustand",
+    "build:main": "esbuild main.ts --bundle --format=cjs --platform=node --outfile=dist/main.js --external:electron --external:@main/*",
+    "build": "npm run build:renderer && npm run build:main"
+  },
+  "dependencies": {
+    "bonjour-service": "^1.2.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.0",
+    "typescript": "^5.0.0",
+    "zustand": "^4.5.0",
+    "react": "^18.0.0",
+    "@types/react": "^18.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
