@@ -26,6 +26,7 @@ const CH = {
   BRIDGES_ADD:         'rose-bond:bridges.add',
   BRIDGES_REMOVE:      'rose-bond:bridges.remove',
   BRIDGES_RENAME:      'rose-bond:bridges.rename',
+  BRIDGES_UPDATE_TOKEN: 'rose-bond:bridges.updateToken',
   // Devices
   DEVICES_LIST:        'rose-bond:devices.list',
   DEVICES_ACTION:      'rose-bond:devices.action',
@@ -411,6 +412,58 @@ export function registerBondHandlers(ctx: ExtensionMainContext): () => void {
     if (!b) return { ok: false, error: 'Bridge not found' }
     b.name = name.trim() || b.name
     await saveSettings()
+    return { ok: true }
+  })
+
+  // Rotate the local token on a configured bridge. By default we verify the
+  // new token against the bridge before persisting; if the bridge is offline
+  // and the user is sure the token is correct, they can pass forceSave=true
+  // to skip verification.
+  ipcMain.handle(CH.BRIDGES_UPDATE_TOKEN, async (
+    _event,
+    bondid: string,
+    token: string,
+    opts?: { forceSave?: boolean }
+  ) => {
+    if (!bondid || !token?.trim()) return { ok: false, error: 'bondid and token are required' }
+    const record = settings.bridges.find((b) => b.bondid === bondid)
+    if (!record) return { ok: false, error: 'Bridge not found' }
+
+    const newToken = token.trim()
+    const force = opts?.forceSave === true
+
+    // Best-effort IP resolution: prefer the live runtime ip, then lastIp, then discovery.
+    let ip = bridges.get(bondid)?.client.ip ?? record.lastIp ?? null
+    if (!ip && discovery) {
+      const found = await discovery.resolveBondid(bondid, 5_000)
+      if (found) ip = found.ip
+    }
+
+    if (!force) {
+      if (!ip) {
+        return { ok: false, error: 'Bridge IP unknown — wait for discovery, or use Save without verifying.' }
+      }
+      const tester = new BondClient(bondid, ip, newToken)
+      try {
+        const v = await tester.getVersion()
+        if (v.bondid && v.bondid.toUpperCase() !== bondid.toUpperCase()) {
+          return { ok: false, error: `Bridge at ${ip} reported a different bondid (${v.bondid}).` }
+        }
+      } catch (err) {
+        return { ok: false, error: `Token verification failed: ${(err as Error).message}` }
+      }
+    }
+
+    record.token = newToken
+    if (ip) record.lastIp = ip
+    await saveSettings()
+
+    if (ip) {
+      // Reconnect with the new token. If verification was skipped and the
+      // bridge is unreachable, this will simply leave the bridge offline —
+      // mirrors the existing connectAllSavedBridges behaviour.
+      await connectBridge(record, ip)
+    }
     return { ok: true }
   })
 

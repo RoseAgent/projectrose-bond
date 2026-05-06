@@ -4,6 +4,7 @@ import {
   bridgesAdd,
   bridgesRemove,
   bridgesRename,
+  bridgesUpdateToken,
   bridgesVerify,
   deviceDelete,
   deviceOverride,
@@ -214,6 +215,7 @@ function ConfiguredBridgeCard({
   const [editing, setEditing] = useState(false)
   const [draftName, setDraftName] = useState(bridge.name)
   const [busy, setBusy] = useState(false)
+  const [tokenOpen, setTokenOpen] = useState(false)
 
   useEffect(() => { setDraftName(bridge.name) }, [bridge.name])
 
@@ -269,9 +271,19 @@ function ConfiguredBridgeCard({
         <div className={styles.bridgeActions}>
           <button className={styles.btnSm} onClick={refresh} disabled={busy}>Refresh</button>
           <button className={styles.btnSm} onClick={() => setEditing(true)}>Rename</button>
+          <button className={styles.btnSm} onClick={() => setTokenOpen((v) => !v)}>
+            {tokenOpen ? 'Cancel token' : 'Update token'}
+          </button>
           <button className={styles.btnSm} style={{ color: 'var(--color-error, #dc3545)' }} onClick={remove}>Remove</button>
         </div>
       </div>
+
+      {tokenOpen && (
+        <UpdateTokenForm
+          bondid={bridge.bondid}
+          onDone={() => { setTokenOpen(false); onRefresh() }}
+        />
+      )}
 
       {devices.length > 0 && (
         <div className={styles.deviceList}>
@@ -280,6 +292,56 @@ function ConfiguredBridgeCard({
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// Inline form to rotate a bridge's local token. Verifies against the bridge
+// by default; offers a "save without verifying" fallback for offline bridges.
+function UpdateTokenForm({ bondid, onDone }: { bondid: string; onDone: () => void }): JSX.Element {
+  const [token, setToken] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const submit = async (force: boolean): Promise<void> => {
+    const t = token.trim()
+    if (!t) { setErr('Token required'); return }
+    if (force && !confirm('Save the new token without verifying it against the bridge?\n\nIf the token is wrong, the bridge will appear offline until you fix it.')) return
+    setBusy(true); setErr(null)
+    try {
+      const res = await bridgesUpdateToken(bondid, t, force ? { forceSave: true } : undefined)
+      if (res.ok) {
+        setToken('')
+        onDone()
+      } else {
+        setErr(res.error)
+      }
+    } catch (e) {
+      setErr((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className={styles.formInline} style={{ marginTop: 8, alignItems: 'center', gap: 6 }}>
+      <input
+        className={styles.inlineInput}
+        type="password"
+        placeholder="New local token"
+        autoFocus
+        value={token}
+        onChange={(e) => setToken(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter') void submit(false) }}
+        style={{ flex: 1, minWidth: 220 }}
+      />
+      <button className={styles.btnPrimary} onClick={() => void submit(false)} disabled={busy}>
+        {busy ? 'Saving…' : 'Verify & save'}
+      </button>
+      <button className={styles.btnSm} onClick={() => void submit(true)} disabled={busy} title="Save without contacting the bridge">
+        Save without verifying
+      </button>
+      {err && <div className={styles.errorText} style={{ flexBasis: '100%' }}>{err}</div>}
     </div>
   )
 }

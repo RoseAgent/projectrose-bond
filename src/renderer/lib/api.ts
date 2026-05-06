@@ -46,6 +46,11 @@ export const bridgesRemove = (bondid: string): Promise<{ ok: boolean; error?: st
 export const bridgesRename = (bondid: string, name: string): Promise<{ ok: boolean; error?: string }> =>
   inv('rose-bond:bridges.rename', bondid, name)
 
+export const bridgesUpdateToken = (
+  bondid: string, token: string, opts?: { forceSave?: boolean }
+): Promise<{ ok: true } | { ok: false; error: string }> =>
+  inv('rose-bond:bridges.updateToken', bondid, token, opts)
+
 // ---- Devices -----------------------------------------------------------
 
 export const devicesList = (): Promise<{ devices: BondDeviceView[] }> =>
