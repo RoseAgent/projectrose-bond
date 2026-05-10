@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { devicesAction } from '../lib/api'
+import { devicesToggle } from '../lib/api'
 import { DeviceCard } from './DeviceCard'
 import type { BondDeviceView, BondRoom, BondConfiguredBridge } from '../lib/types'
 import styles from '../PageView.module.css'
@@ -16,15 +16,10 @@ export function RoomSection({ title, room, devices, bridges, defaultOpen = true 
   const [open, setOpen] = useState(defaultOpen)
   const [busy, setBusy] = useState(false)
 
-  // "All on/off" is offered when every member supports the action.
-  const allHave = (action: string): boolean => devices.length > 0 && devices.every((d) => d.actions.includes(action))
-  const showAllOn  = allHave('TurnOn')
-  const showAllOff = allHave('TurnOff')
-
-  const fireAll = async (action: string): Promise<void> => {
+  const toggleAll = async (): Promise<void> => {
     setBusy(true)
     try {
-      await Promise.all(devices.map((d) => devicesAction(d.bondid, d.deviceId, action)))
+      await Promise.all(devices.map((d) => devicesToggle(d.bondid, d.deviceId)))
     } finally {
       setBusy(false)
     }
@@ -46,10 +41,9 @@ export function RoomSection({ title, room, devices, bridges, defaultOpen = true 
           <span>{title}</span>
           <span className={styles.roomCount}>({devices.length})</span>
         </button>
-        {open && (showAllOn || showAllOff) && (
+        {open && devices.length > 0 && (
           <div className={styles.roomBulkBtns}>
-            {showAllOn  && <button className={styles.cardBtn} disabled={busy} onClick={() => fireAll('TurnOn')}>All On</button>}
-            {showAllOff && <button className={styles.cardBtn} disabled={busy} onClick={() => fireAll('TurnOff')}>All Off</button>}
+            <button className={styles.cardBtn} disabled={busy} onClick={toggleAll}>Toggle All</button>
           </div>
         )}
       </header>

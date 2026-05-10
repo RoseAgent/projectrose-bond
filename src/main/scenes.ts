@@ -17,9 +17,8 @@ export interface SceneRunResult {
 
 /**
  * Runs scene steps sequentially. `delay` steps `await` for ms before the next
- * step. `action` steps are dispatched via the per-bridge client. A failed step
- * does NOT abort the scene — it's recorded and we move on. Returning `ok=false`
- * if any step failed lets the AI tool surface partial-failure cleanly.
+ * step. `toggle` steps fire TogglePower on the named device. A failed step
+ * does NOT abort the scene — it's recorded and we move on.
  */
 export async function runScene(
   scene: BondScene,
@@ -42,7 +41,7 @@ export async function runScene(
         if (!client) {
           throw new Error(`Bridge ${step.bondid} not connected`)
         }
-        await client.runAction(step.deviceId, step.action, step.params)
+        await client.runAction(step.deviceId, 'TogglePower', {})
       }
     } catch (err) {
       ok = false

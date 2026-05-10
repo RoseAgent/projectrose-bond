@@ -5,7 +5,6 @@ import {
   devicesList,
   roomsList,
   scenesList,
-  onState,
   onBridgeStatus,
   onDevicesChanged,
   onDiscovered,
@@ -17,7 +16,6 @@ import type {
   BondDeviceView,
   BondRoom,
   BondScene,
-  DeviceState,
   DiscoveredBridge
 } from './lib/types'
 
@@ -66,15 +64,6 @@ export const useBondStore = create<BondStoreState>((set, get) => ({
 
       if (!bound) {
         unsubscribers = [
-          onState(({ bondid, deviceId, state }) => {
-            set((s) => ({
-              devices: s.devices.map((d) =>
-                d.bondid === bondid && d.deviceId === deviceId
-                  ? { ...d, state: { ...d.state, ...state } as DeviceState, online: true }
-                  : d
-              )
-            }))
-          }),
           onBridgeStatus((status: BondBridgeStatus) => {
             set((s) => ({
               configuredBridges: s.configuredBridges.map((b) =>
@@ -169,10 +158,3 @@ export function groupDevicesByRoom(devices: BondDeviceView[], rooms: BondRoom[])
   return groups
 }
 
-/** Best-effort short label for a device's online state. */
-export function isOn(d: BondDeviceView): boolean {
-  if (typeof d.state.power === 'number') return d.state.power === 1
-  if (typeof d.state.light === 'number') return d.state.light === 1
-  if (typeof d.state.brightness === 'number') return d.state.brightness > 0
-  return false
-}

@@ -1,5 +1,4 @@
 import { createSocket, type Socket } from 'dgram'
-import type { DeviceState } from './types'
 
 const BPUP_PORT = 30007
 const KEEPALIVE_INTERVAL_MS = 60_000
@@ -8,8 +7,6 @@ const KEEPALIVE_GRACE_MS = 90_000     // if no ack within this window, fall back
 export interface BpupListenerCallbacks {
   /** Bridge acknowledged a keep-alive — BPUP is alive. */
   onAck: (bondid: string, source: { address: string; port: number }) => void
-  /** Bridge pushed a state change. */
-  onState: (bondid: string, deviceId: string, state: DeviceState) => void
   /** Heard from the bridge in some other way (raw push). Optional debugging hook. */
   onMessage?: (bondid: string, message: BpupMessage) => void
   /** No keep-alive ack within the grace window — fall back to polling/refresh. */
@@ -89,14 +86,6 @@ export function subscribeBpup(
     }
 
     callbacks.onMessage?.(bondid, parsed)
-
-    // State pushes have topic shape "devices/<id>/state".
-    if (parsed.t && typeof parsed.t === 'string' && parsed.b && typeof parsed.b === 'object') {
-      const m = /^devices\/([^/]+)\/state$/.exec(parsed.t)
-      if (m) {
-        callbacks.onState(bondid, m[1]!, parsed.b as DeviceState)
-      }
-    }
   })
 
   socket.on('error', (err) => {

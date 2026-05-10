@@ -27,17 +27,6 @@ export interface BondConfiguredBridge {
   status: BondBridgeStatus
 }
 
-export interface DeviceState {
-  power?: 0 | 1
-  speed?: number
-  brightness?: number
-  position?: number
-  flame?: number
-  light?: 0 | 1
-  direction?: -1 | 1
-  [key: string]: unknown
-}
-
 export interface DeviceOverride {
   name?: string
   exposeToAi?: boolean
@@ -50,8 +39,6 @@ export interface BondDeviceView {
   name: string
   bondReportedName: string
   override: DeviceOverride
-  actions: string[]
-  state: DeviceState
   online: boolean
 }
 
@@ -62,7 +49,7 @@ export interface BondRoom {
 }
 
 export type BondSceneStep =
-  | { kind: 'action'; bondid: string; deviceId: string; action: string; params?: Record<string, unknown> }
+  | { kind: 'toggle'; bondid: string; deviceId: string }
   | { kind: 'delay'; ms: number }
 
 export interface BondScene {

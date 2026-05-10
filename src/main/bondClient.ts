@@ -1,4 +1,4 @@
-import { BondError, type DeviceState, type DeviceType } from './types'
+import { BondError, type DeviceType } from './types'
 
 const REQUEST_TIMEOUT_MS = 5_000
 
@@ -108,10 +108,6 @@ export class BondClient {
       raw.actions = Object.keys(cmd).filter((k) => !k.startsWith('_'))
     }
     return raw
-  }
-
-  async getDeviceState(deviceId: string): Promise<DeviceState> {
-    return this.withRetry(() => this.fetchJson<DeviceState>('GET', `/devices/${encodeURIComponent(deviceId)}/state`))
   }
 
   async runAction(deviceId: string, action: string, args?: Record<string, unknown>): Promise<void> {

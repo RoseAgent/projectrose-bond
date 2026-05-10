@@ -5,7 +5,6 @@ import type {
   BondScene,
   CapturedSignal,
   DeviceOverride,
-  DeviceState,
   DiscoveredBridge,
   BondBridgeStatus
 } from './types'
@@ -56,10 +55,10 @@ export const bridgesUpdateToken = (
 export const devicesList = (): Promise<{ devices: BondDeviceView[] }> =>
   inv('rose-bond:devices.list')
 
-export const devicesAction = (
-  bondid: string, deviceId: string, action: string, params?: Record<string, unknown>
+export const devicesToggle = (
+  bondid: string, deviceId: string
 ): Promise<{ ok: boolean; error?: string }> =>
-  inv('rose-bond:devices.action', bondid, deviceId, action, params)
+  inv('rose-bond:devices.toggle', bondid, deviceId)
 
 export const deviceOverride = (
   bondid: string, deviceId: string, override: DeviceOverride | null
@@ -113,9 +112,6 @@ export const learnAssign = (
   inv('rose-bond:learn.assign', bondid, signal, params)
 
 // ---- Subscriptions (broadcasts) ---------------------------------------
-
-export const onState = (cb: (msg: { bondid: string; deviceId: string; state: DeviceState }) => void): (() => void) =>
-  window.api.on('rose-bond:state', (...args) => cb(args[0] as { bondid: string; deviceId: string; state: DeviceState }))
 
 export const onBridgeStatus = (cb: (status: BondBridgeStatus) => void): (() => void) =>
   window.api.on('rose-bond:bridge.status', (...args) => cb(args[0] as BondBridgeStatus))

@@ -2,7 +2,6 @@ import type {
   BondDeviceOverride,
   DeviceCacheEntry,
   DeviceMeta,
-  DeviceState,
   DeviceType
 } from './types'
 
@@ -18,28 +17,12 @@ export class DeviceCache {
     const prev = this.entries.get(key)
     const entry: DeviceCacheEntry = {
       meta: { bondid, deviceId, ...meta },
-      state: prev?.state ?? {},
       online: prev?.online ?? true,
       lastSeenMs: Date.now()
     }
     this.entries.set(key, entry)
     this.emit(key, entry)
     return entry
-  }
-
-  setState(bondid: string, deviceId: string, state: DeviceState): DeviceCacheEntry | null {
-    const key = cacheKey(bondid, deviceId)
-    const prev = this.entries.get(key)
-    if (!prev) return null
-    const next: DeviceCacheEntry = {
-      ...prev,
-      state: { ...prev.state, ...state },
-      online: true,
-      lastSeenMs: Date.now()
-    }
-    this.entries.set(key, next)
-    this.emit(key, next)
-    return next
   }
 
   setOnline(bondid: string, online: boolean): void {

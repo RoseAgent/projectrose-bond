@@ -42,7 +42,7 @@ export function ScenesTab(): JSX.Element {
       <section className={styles.section}>
         <div className={styles.sectionTitle}>Scenes</div>
         {scenes.length === 0
-          ? <div className={styles.sectionHint}>No scenes yet. Add one to chain device actions and delays.</div>
+          ? <div className={styles.sectionHint}>No scenes yet. Add one to chain device toggles and delays.</div>
           : <div className={styles.cardList}>{scenes.map((s) => <SceneEditor key={s.id} scene={s} onChange={refresh} />)}</div>
         }
       </section>
@@ -87,18 +87,16 @@ function SceneEditor({ scene, onChange }: { scene: BondScene; onChange: () => Pr
     }
   }
 
-  const addActionStep = async (): Promise<void> => {
+  const addToggleStep = async (): Promise<void> => {
     const first = devices[0]
     if (!first) {
       alert('No devices available — connect a bridge first.')
       return
     }
     const newStep: BondSceneStep = {
-      kind: 'action',
+      kind: 'toggle',
       bondid: first.bondid,
-      deviceId: first.deviceId,
-      action: first.actions[0] ?? 'TurnOn',
-      params: {}
+      deviceId: first.deviceId
     }
     const next = [...steps, newStep]
     setSteps(next)
@@ -157,8 +155,8 @@ function SceneEditor({ scene, onChange }: { scene: BondScene; onChange: () => Pr
 
       <div style={{ marginTop: 8 }}>
         {steps.map((step, idx) =>
-          step.kind === 'action'
-            ? <ActionStep key={idx}
+          step.kind === 'toggle'
+            ? <ToggleStep key={idx}
                 step={step}
                 idx={idx}
                 last={idx === steps.length - 1}
@@ -178,7 +176,7 @@ function SceneEditor({ scene, onChange }: { scene: BondScene; onChange: () => Pr
       </div>
 
       <div className={styles.formInline} style={{ marginTop: 8 }}>
-        <button className={styles.btn} onClick={addActionStep}>+ Action step</button>
+        <button className={styles.btn} onClick={addToggleStep}>+ Toggle step</button>
         <button className={styles.btn} onClick={addDelayStep}>+ Delay step</button>
       </div>
 
@@ -187,10 +185,10 @@ function SceneEditor({ scene, onChange }: { scene: BondScene; onChange: () => Pr
   )
 }
 
-function ActionStep({
+function ToggleStep({
   step, idx, last, onChange, onRemove, onMove
 }: {
-  step: Extract<BondSceneStep, { kind: 'action' }>
+  step: Extract<BondSceneStep, { kind: 'toggle' }>
   idx: number
   last: boolean
   onChange: (s: BondSceneStep) => void
@@ -198,24 +196,15 @@ function ActionStep({
   onMove: (dir: -1 | 1) => void
 }): JSX.Element {
   const devices = useBondStore((s) => s.devices)
-  const device = devices.find((d) => d.bondid === step.bondid && d.deviceId === step.deviceId)
-
-  const [argument, setArgument] = useState(String(step.params?.argument ?? ''))
 
   const updateDevice = (key: string): void => {
     const [bondid, deviceId] = key.split('|')
-    const dev = devices.find((d) => d.bondid === bondid && d.deviceId === deviceId)
-    onChange({
-      ...step,
-      bondid: bondid!,
-      deviceId: deviceId!,
-      action: dev?.actions[0] ?? step.action
-    })
+    onChange({ kind: 'toggle', bondid: bondid!, deviceId: deviceId! })
   }
 
   return (
     <div className={styles.sceneStep}>
-      <span className={styles.stepKindLabel}>{idx + 1}</span>
+      <span className={styles.stepKindLabel}>{idx + 1} • TOGGLE</span>
       <select
         className={styles.inlineInput}
         value={`${step.bondid}|${step.deviceId}`}
@@ -225,23 +214,6 @@ function ActionStep({
           <option key={`${d.bondid}|${d.deviceId}`} value={`${d.bondid}|${d.deviceId}`}>{effectiveName(d)}</option>
         ))}
       </select>
-      <select
-        className={styles.inlineInput}
-        value={step.action}
-        onChange={(e) => onChange({ ...step, action: e.target.value })}
-      >
-        {(device?.actions ?? [step.action]).map((a) => <option key={a} value={a}>{a}</option>)}
-      </select>
-      <input
-        className={styles.inlineInput}
-        placeholder="argument (optional)"
-        value={argument}
-        onChange={(e) => setArgument(e.target.value)}
-        onBlur={() => {
-          const num = argument.trim() === '' ? undefined : Number(argument)
-          onChange({ ...step, params: num === undefined || Number.isNaN(num) ? {} : { argument: num } })
-        }}
-      />
       <span className={styles.formInline}>
         <button className={styles.btnSm} onClick={() => onMove(-1)} disabled={idx === 0} title="Move up">↑</button>
         <button className={styles.btnSm} onClick={() => onMove(1)}  disabled={last}      title="Move down">↓</button>

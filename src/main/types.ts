@@ -38,7 +38,7 @@ export interface BondRoom {
 }
 
 export type BondSceneStep =
-  | { kind: 'action'; bondid: string; deviceId: string; action: string; params?: Record<string, unknown> }
+  | { kind: 'toggle'; bondid: string; deviceId: string }
   | { kind: 'delay'; ms: number }
 
 export interface BondScene {
@@ -78,21 +78,8 @@ export interface DeviceMeta {
   actions: string[]               // from /v2/devices/{id}
 }
 
-export interface DeviceState {
-  power?: 0 | 1
-  speed?: number
-  brightness?: number
-  position?: number
-  flame?: number
-  light?: 0 | 1
-  direction?: -1 | 1
-  // Free-form — Bond returns lots of variants.
-  [key: string]: unknown
-}
-
 export interface DeviceCacheEntry {
   meta: DeviceMeta
-  state: DeviceState
   online: boolean
   lastSeenMs: number
 }

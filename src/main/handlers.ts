@@ -4,7 +4,7 @@ import { subscribeBpup, type BpupSubscription } from './bpup'
 import { startDiscovery, type DiscoveryHandle } from './discovery'
 import { DeviceCache } from './deviceCache'
 import { startLearnSession, assignCapturedSignal, type LearnSession } from './learn'
-import { makeListDevicesTool, makeControlTool } from './tools'
+import { makeListDevicesTool, makeTogglePowerTool } from './tools'
 import {
   EMPTY_BOND_SETTINGS,
   type BondBridgeRecord,
@@ -29,7 +29,7 @@ const CH = {
   BRIDGES_UPDATE_TOKEN: 'rose-bond:bridges.updateToken',
   // Devices
   DEVICES_LIST:        'rose-bond:devices.list',
-  DEVICES_ACTION:      'rose-bond:devices.action',
+  DEVICES_TOGGLE:      'rose-bond:devices.toggle',
   DEVICE_OVERRIDE:     'rose-bond:devices.override',
   DEVICE_REFRESH:      'rose-bond:devices.refresh',
   DEVICE_DELETE:       'rose-bond:devices.delete',
@@ -52,7 +52,6 @@ const CH = {
 
 // Broadcast channels (events from main → renderer)
 const BC = {
-  STATE:               'rose-bond:state',
   BRIDGE_STATUS:       'rose-bond:bridge.status',
   DEVICES_CHANGED:     'rose-bond:devices.changed',
   DISCOVERED:          'rose-bond:bridges.discovered',
@@ -81,12 +80,35 @@ export function registerBondHandlers(ctx: ExtensionMainContext): () => void {
   async function loadSettings(): Promise<void> {
     const raw = await ctx.getSettings()
     const stored = raw['bond'] as Partial<BondSettings> | undefined
+    const { scenes, dirty } = migrateScenes(stored?.scenes ?? [])
     settings = {
       bridges:         stored?.bridges ?? [],
       rooms:           stored?.rooms ?? [],
-      scenes:          stored?.scenes ?? [],
+      scenes,
       deviceOverrides: stored?.deviceOverrides ?? {}
     }
+    if (dirty) await saveSettings()
+  }
+
+  // One-time migration: legacy scene steps used `kind: 'action'` with an
+  // arbitrary action name. The simplified model only knows toggle + delay, so
+  // collapse every action step (TurnOn/TurnOff/SetSpeed/etc.) into a toggle.
+  function migrateScenes(stored: BondScene[]): { scenes: BondScene[]; dirty: boolean } {
+    let dirty = false
+    const scenes = stored.map((scene) => {
+      const newSteps = scene.steps.flatMap((step) => {
+        if (step.kind === 'delay' || step.kind === 'toggle') return [step]
+        const legacy = step as unknown as { bondid?: string; deviceId?: string }
+        if (legacy.bondid && legacy.deviceId) {
+          dirty = true
+          return [{ kind: 'toggle' as const, bondid: legacy.bondid, deviceId: legacy.deviceId }]
+        }
+        dirty = true
+        return []
+      })
+      return { ...scene, steps: newSteps }
+    })
+    return { scenes, dirty }
   }
 
   async function saveSettings(): Promise<void> {
@@ -124,10 +146,6 @@ export function registerBondHandlers(ctx: ExtensionMainContext): () => void {
             bondReportedName: meta.name ?? id,
             actions: meta.actions ?? []
           })
-          try {
-            const state = await rt.client.getDeviceState(id)
-            cache.setState(bondid, id, state)
-          } catch { /* state fetch may fail until first push; not fatal */ }
         } catch (err) {
           console.warn(`[rose-bond] refresh device ${bondid}:${id} failed:`, (err as Error).message)
         }
@@ -157,10 +175,6 @@ export function registerBondHandlers(ctx: ExtensionMainContext): () => void {
         r.status.lastSeenMs = Date.now()
         cache.setOnline(b, true)
         emitBridgeStatus(b)
-      },
-      onState: (b, deviceId, state) => {
-        const updated = cache.setState(b, deviceId, state)
-        if (updated) ctx.broadcast(BC.STATE, { bondid: b, deviceId, state: updated.state })
       },
       onFallback: (b, reason) => {
         console.warn(`[rose-bond] BPUP fallback for ${b}: ${reason}`)
@@ -307,7 +321,7 @@ export function registerBondHandlers(ctx: ExtensionMainContext): () => void {
       bridges: () => settings.bridges,
       clientFor: (bondid) => bridges.get(bondid)?.client ?? null
     }),
-    makeControlTool({
+    makeTogglePowerTool({
       cache,
       getSettings: () => settings,
       bridges: () => settings.bridges,
@@ -479,26 +493,17 @@ export function registerBondHandlers(ctx: ExtensionMainContext): () => void {
         name: entry.meta.name,
         bondReportedName: entry.meta.bondReportedName,
         override: ov,
-        actions: entry.meta.actions,
-        state: entry.state,
         online: entry.online
       }
     })
     return { devices: list }
   })
 
-  ipcMain.handle(CH.DEVICES_ACTION, async (_event, bondid: string, deviceId: string, action: string, params?: Record<string, unknown>) => {
+  ipcMain.handle(CH.DEVICES_TOGGLE, async (_event, bondid: string, deviceId: string) => {
     const rt = bridges.get(bondid)
     if (!rt) return { ok: false, error: 'Bridge not connected' }
     try {
-      await rt.client.runAction(deviceId, action, params)
-      // Refetch state immediately (BPUP will also push it, but we don't want to
-      // wait if the bridge is in fallback mode).
-      try {
-        const state = await rt.client.getDeviceState(deviceId)
-        const updated = cache.setState(bondid, deviceId, state)
-        if (updated) ctx.broadcast(BC.STATE, { bondid, deviceId, state: updated.state })
-      } catch { /* state fetch failure is non-fatal */ }
+      await rt.client.runAction(deviceId, 'TogglePower', {})
       return { ok: true }
     } catch (err) {
       return { ok: false, error: (err as Error).message }
