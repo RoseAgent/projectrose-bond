@@ -13,9 +13,9 @@ import {
   type BondSettings,
   type BridgeRuntimeStatus,
   type CapturedSignal,
-  type DiscoveredBridge,
-  type ExtensionMainContext
+  type DiscoveredBridge
 } from './types'
+import type { ExtensionMainContext } from '../../../../ProjectRose/src/shared/extension-contract'
 
 // IPC channel constants — keep in sync with src/renderer/lib/api.ts
 const CH = {

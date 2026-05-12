@@ -1,23 +1,6 @@
-// Local copies of the host's extension types — extensions don't import from
-// the host. Keep these in sync with ProjectRose/src/shared/extension-types.ts.
-
-export interface ExtensionToolEntry {
-  name: string
-  description: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  schema: Record<string, any>
-  execute: (input: Record<string, unknown>, projectRoot: string) => Promise<string>
-}
-
-export interface ExtensionMainContext {
-  rootPath: string
-  getSettings: () => Promise<Record<string, unknown>>
-  updateSettings: (patch: Record<string, unknown>) => Promise<void>
-  broadcast: (channel: string, data: unknown) => void
-  notifyStatus?: (text: string, opts?: { tone?: 'info' | 'success' | 'error' | 'warning'; durationMs?: number }) => void
-  registerTools: (tools: ExtensionToolEntry[]) => void
-  registerSensitiveFields: (keys: string[]) => void
-}
+// Host types now come from the shared extension contract. See main.ts for
+// the relative import; consumers in this file should import them from there
+// rather than re-declaring locally.
 
 // ---- Bond domain types ------------------------------------------------------
 

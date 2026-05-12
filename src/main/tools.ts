@@ -4,9 +4,9 @@ import type {
   BondBridgeRecord,
   BondRoom,
   BondScene,
-  BondSettings,
-  ExtensionToolEntry
+  BondSettings
 } from './types'
+import type { ExtensionToolEntry } from '../../../../ProjectRose/src/shared/extension-contract'
 import { deviceTypeLabel } from './deviceCache'
 
 export interface BondToolEnv {
