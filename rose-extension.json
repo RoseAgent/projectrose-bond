@@ -11,6 +11,8 @@
     "globalSettings": true,
     "main": true,
     "agentTools": true,
+    "broadcast": true,
+    "notifyStatus": true,
     "tools": [
       {
         "name": "bond_list_devices",
